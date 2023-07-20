@@ -16,9 +16,39 @@ app_description = f"""
     stray away from your material."""
 st.write(app_description)
 st.subheader("Our Main Features")
-st.markdown("""
-- [**Focused Reading:**](/Timed_Read "redirects to new tab") Open study material within the app and set a pomodoro timer
-to keep you on task and focused using the popular Pomodoro Technique. 
-- **Feature 2:** Feature 2 description
-- **Feature 3:** Feature 3 description
-""")
+
+# Feature page names will be in the pages directory
+# Function below is for getting those names dynamically and automatically updating the list
+def get_page_names():
+    import os
+    names = []
+    for file in os.listdir("pages"):
+        if file.endswith(".py"):
+            names.append((file.split(".")[0]))
+    return names
+names = get_page_names()
+
+# Set page descriptions below, the links will be automatically generated
+# Format: features = {
+#           "Feature_Name": {
+#               "description": "Feature description",
+#               "link": "(/Feature_Name, "redirects to new tab")",
+#               "name": ' '.join([word.capitalize() for word in "Feature Name".split("_")])
+#           },
+#           "Feature_Name_2": {
+#        "description": "Feature description",
+#               "link": "(/Feature_Name_2, "redirects to new tab")",
+#               "name": ' '.join([word.capitalize() for word in "Feature Name 2".split("_")])
+#           },
+#           ...
+#       }
+features = {name: {"description": "",
+                   "link": f"(/{name} 'Opens {name} page in a new tab')",
+                   "name": ' '.join([word.capitalize() for word in name.split("_")])
+                   } for name in names
+            }
+
+features["Read_Radar"]["description"] = "Open study material within the app and set a pomodoro timer to keep you on task and focused using the popular Pomodoro Technique."
+
+feature_list = '\n'.join([f"- [{features[feature]['name']}]{features[feature]['link']} : {features[feature]['description']}" for feature in features])
+st.markdown(feature_list)
