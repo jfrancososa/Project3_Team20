@@ -48,7 +48,8 @@ features = {name: {"description": "",
                    } for name in names
             }
 
-features["Read_Radar"]["description"] = "Open study material within the app and set a pomodoro timer to keep you on task and focused using the popular Pomodoro Technique."
+features["Flashcards"]["description"] = "Create flashcards and study them using the Leitner System."
+features["Read_Radar"]["description"] = "Focus on reading by setting a timer using the Pomodoro Technique."
 
 feature_list = '\n'.join([f"- [{features[feature]['name']}]{features[feature]['link']} : {features[feature]['description']}" for feature in features])
 st.markdown(feature_list)
