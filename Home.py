@@ -1,7 +1,7 @@
 import streamlit as st
 
 # Set page title
-APP_NAME = "App Name"
+APP_NAME = "Focus Frame"
 st.title(APP_NAME, anchor="center")
 
 st.divider()
@@ -36,7 +36,7 @@ names = get_page_names()
 #               "name": ' '.join([word.capitalize() for word in "Feature Name".split("_")])
 #           },
 #           "Feature_Name_2": {
-#        "description": "Feature description",
+#               "description": "Feature description",
 #               "link": "(/Feature_Name_2, "redirects to new tab")",
 #               "name": ' '.join([word.capitalize() for word in "Feature Name 2".split("_")])
 #           },
@@ -51,5 +51,8 @@ features = {name: {"description": "",
 features["Flashcards"]["description"] = "Create flashcards and study them using the Leitner System."
 features["Read_Radar"]["description"] = "Focus on reading by setting a timer using the Pomodoro Technique."
 
-feature_list = '\n'.join([f"- [{features[feature]['name']}]{features[feature]['link']} : {features[feature]['description']}" for feature in features])
+feature_list = '\n'.join(
+    [f"- [{features[feature]['name']}]{features[feature]['link']} : {features[feature]['description']}"
+     for feature in features
+     ])
 st.markdown(feature_list)
