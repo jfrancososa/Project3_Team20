@@ -12,13 +12,18 @@ FILE_NAME = basename(__file__)
 PAGE_TITLE = FILE_NAME.split(".")[0].replace("_", " ")
 st.title(PAGE_TITLE)
 
+with st.expander("Overview", expanded=True):
+    st.write("Description")
+with st.expander("Pomodoro Technique", expanded=False):
+    st.write("Description")
+
 st.divider()
 
-
+### PDF Viewer ###
 def show_pdf(file):
     base64_pdf = base64.b64encode(file.read()).decode('utf-8')
     pdf_display = f'<embed src="data:application/pdf;base64,{base64_pdf}" ' \
-                  f'width="800" height="1000" type="application/pdf"></iframe>'
+                  f'width="800" height="1000" type="application/pdf"></embed>'
     st.markdown(pdf_display, unsafe_allow_html=True)
 
 
@@ -104,6 +109,13 @@ async def break_timer(break_face):
 
 
 with st.sidebar:
+    st.sidebar.header("Pomodoro's")
+    if "pomodoro_count" not in st.session_state:
+        st.session_state.pomodoro_count = 0
+    if "pomodoro_total" not in st.session_state:
+        st.session_state.pomodoro_total = 4
+    st.write(f"Completed: {st.session_state.pomodoro_count}/{st.session_state.pomodoro_total}")
+
     st.sidebar.header("Task Time")
     if "focus_start" not in st.session_state:
         st.session_state.focus_start = False
