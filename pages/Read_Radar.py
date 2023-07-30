@@ -19,7 +19,8 @@ with st.expander("Pomodoro Technique", expanded=False):
 
 st.divider()
 
-### PDF Viewer ###
+
+# PDF Viewer ###
 def show_pdf(file):
     base64_pdf = base64.b64encode(file.read()).decode('utf-8')
     pdf_display = f'<embed src="data:application/pdf;base64,{base64_pdf}" ' \
@@ -36,154 +37,205 @@ else:
     st.write("No file uploaded yet")
 
 
-def reset_focus_time():
-    st.session_state.focus_hours = 1
-    st.session_state.focus_minutes = 30
-    set_focus_time()
-    st.session_state.focus_start = False
-    st.session_state.focus_label = "Start"
+# Pomodoro Counter and Timers ###
+# Utility Functions
 
 
-def reset_break_time():
-    st.session_state.break_hours = 0
-    st.session_state.break_minutes = 5
-    set_break_time()
-    st.session_state.break_start = False
-    st.session_state.break_label = "Start"
+def set_time(mode):
+    hr_button_key = f"{mode}_hours"
+    hr_button_value = st.session_state[hr_button_key]
+    min_button_key = f"{mode}_minutes"
+    min_button_value = st.session_state[min_button_key]
+    st.session_state[mode]["hours"] = hr_button_value
+    st.session_state[mode]["minutes"] = min_button_value
+    set_curr_time(mode)
 
 
-def set_focus_time():
-    st.session_state.curr_focus_time = st.session_state.focus_hours * 3600 + st.session_state.focus_minutes * 60
+def set_curr_time(mode):
+    st.session_state[mode]["curr_time"] = st.session_state[mode]["hours"] * 3600 + \
+                                          st.session_state[mode]["minutes"] * 60 + \
+                                          st.session_state[mode]["seconds"]
 
 
-def set_break_time():
-    st.session_state.curr_break_time = st.session_state.break_hours * 3600 + st.session_state.break_minutes * 60
+def format_time(mode):
+    hrs = st.session_state[mode]["curr_time"] // 3600
+    mins = (st.session_state[mode]["curr_time"] - hrs * 3600) // 60
+    secs = st.session_state[mode]["curr_time"] - hrs * 3600 - mins * 60
+    return f"**{hrs:02d}:{mins:02d}:{secs:02d}**"
 
 
-def format_focus_time(face):
-    hrs = st.session_state.curr_focus_time // 3600
-    mins = (st.session_state.curr_focus_time - hrs * 3600) // 60
-    secs = st.session_state.curr_focus_time - hrs * 3600 - mins * 60
-    face.markdown(f"**{hrs:02d}:{mins:02d}:{secs:02d}**")
+def reset_time(mode):
+    st.session_state[mode]["curr_time"] = st.session_state[mode]["hours"] * 3600 + \
+                                          st.session_state[mode]["minutes"] * 60 + \
+                                          st.session_state[mode]["seconds"]
+    st.session_state[mode]["state"] = False
+    st.session_state[mode]["label"] = "Start"
 
 
-def format_break_time(face):
-    hrs = st.session_state.curr_break_time // 3600
-    mins = (st.session_state.curr_break_time - hrs * 3600) // 60
-    secs = st.session_state.curr_break_time - hrs * 3600 - mins * 60
-    face.markdown(f"**{hrs:02d}:{mins:02d}:{secs:02d}**")
+def reset_count():
+    st.session_state.pomodoro["count"] = 0
+    st.session_state.pomodoro["focus_count"] = 0
 
 
-def focus_bttn_toggle():
-    st.session_state.focus_start = not st.session_state.focus_start
-    if st.session_state.focus_label == "Start":
-        st.session_state.focus_label = "Stop"
+def toggle_state(mode):
+    st.session_state[mode]["state"] = not st.session_state[mode]["state"]
+    if st.session_state[mode]["state"]:
+        st.session_state[mode]["label"] = "Pause"
     else:
-        st.session_state.focus_label = "Start"
+        st.session_state[mode]["label"] = "Start"
 
 
-def break_bttn_toggle():
-    st.session_state.break_start = not st.session_state.break_start
-    if st.session_state.break_label == "Start":
-        st.session_state.break_label = "Stop"
-    else:
-        st.session_state.break_label = "Start"
-
-
-async def focus_timer(focus_face):
+async def timer(mode, face):
     while True:
         if not st.session_state:
+            print(f"Session State is empty - exiting {mode} timer")
             break
-        st.session_state.curr_focus_time = max(0, st.session_state.curr_focus_time - 1)
-        format_focus_time(focus_face)
-        await asyncio.sleep(1)
-
-
-async def break_timer(break_face):
-    while True:
-        if not st.session_state:
+        if st.session_state[mode]["curr_time"] == 0:
+            print(f"{mode.capitalize()} Timer is done")
             break
-        st.session_state.curr_break_time = max(0, st.session_state.curr_break_time - 1)
-        format_break_time(break_face)
+        st.session_state[mode]["curr_time"] = max(0, st.session_state[mode]["curr_time"] - 1)
+        face.header(format_time(mode))
         await asyncio.sleep(1)
-
 
 with st.sidebar:
-    st.sidebar.header("Pomodoro's")
-    if "pomodoro_count" not in st.session_state:
-        st.session_state.pomodoro_count = 0
-    if "pomodoro_total" not in st.session_state:
-        st.session_state.pomodoro_total = 4
-    st.write(f"Completed: {st.session_state.pomodoro_count}/{st.session_state.pomodoro_total}")
+    st.sidebar.title("Pomodoro Settings")
 
-    st.sidebar.header("Task Time")
-    if "focus_start" not in st.session_state:
-        st.session_state.focus_start = False
-    if "focus_label" not in st.session_state:
-        st.session_state.focus_label = "Start"
-    if "focus_hours" not in st.session_state:
-        st.session_state.focus_hours = 1
-    if "focus_minutes" not in st.session_state:
-        st.session_state.focus_minutes = 30
-    if "curr_focus_time" not in st.session_state:
-        st.session_state.curr_focus_time = 0
-        set_focus_time()
-
-    hrs_col, mins_col = st.sidebar.columns(2)
-    with hrs_col:
-        focus_hours = st.number_input("Hours", key="focus_hours",
-                                      min_value=0, max_value=24, on_change=set_focus_time)
-    with mins_col:
-        focus_minutes = st.number_input("Minutes", key="focus_minutes",
-                                        min_value=0, max_value=60, on_change=set_focus_time)
-
-    timer_col, reset_col, face_col = st.sidebar.columns([0.25, 0.25, 0.5])
-    with timer_col:
-        focus_button = st.button(label=st.session_state.focus_label, key="focus", on_click=focus_bttn_toggle)
+    # Pomodoro Counter ########################################################
+    if "pomodoro" not in st.session_state:
+        st.session_state["pomodoro"] = {
+            "count": 0,
+            "focus_count": 0,
+            "complete": False,
+        }
+    complete_col, incomplete_col, reset_col = st.sidebar.columns(3)
+    with complete_col:
+        st.subheader("Completed: ")
+    with incomplete_col:
+        st.subheader(f"{st.session_state.pomodoro['count']}")
     with reset_col:
-        reset_button = st.button(label="Reset", key="focus_reset", on_click=reset_focus_time)
-    with face_col:
-        face = st.empty()
-        format_focus_time(face)
+        st.button("Reset", key="pomodoro_reset", on_click=lambda: reset_count())
+    st.write("*A complete Pomodoro consists of 1 focus session and 1 break session.")
 
-    if st.session_state.focus_start:
-        print("Timer started")
-        asyncio.run(focus_timer(face))
-    else:
-        print("Timer stopped")
+    # Set Session Values for Focus and Break Timers
+    if "focus" not in st.session_state:
+        st.session_state["focus"] = {
+            "hours": 1,
+            "minutes": 30,
+            "seconds": 0,
+            "default_hours": 1,
+            "default_minutes": 30,
+            "default_seconds": 0,
+            "state": False,
+            "label": "Start",
+            "curr_time": 0,
+            "focus_complete": False,
+        }
+        set_curr_time("focus")
+    if "rest" not in st.session_state:
+        st.session_state["rest"] = {
+            "hours": 0,
+            "minutes": 5,
+            "seconds": 0,
+            "default_hours": 0,
+            "default_minutes": 5,
+            "default_seconds": 0,
+            "state": False,
+            "label": "Start",
+            "curr_time": 0,
+            "rest_complete": False,
+        }
+        set_curr_time("rest")
 
-    st.sidebar.header("Break Time")
-    if "break_start" not in st.session_state:
-        st.session_state.break_start = False
-    if "break_label" not in st.session_state:
-        st.session_state.break_label = "Start"
-    if "break_hours" not in st.session_state:
-        st.session_state.break_hours = 0
-    if "break_minutes" not in st.session_state:
-        st.session_state.break_minutes = 5
-    if "curr_break_time" not in st.session_state:
-        st.session_state.curr_break_time = 0
-        set_break_time()
+    # Focus Timer #############################################################
+    focus_container = st.sidebar.container()
 
-    hrs_col, mins_col = st.sidebar.columns(2)
-    with hrs_col:
-        break_hours = st.number_input("Hours", key="break_hours",
-                                      min_value=0, max_value=24, on_change=set_break_time)
-    with mins_col:
-        break_minutes = st.number_input("Minutes", key="break_minutes",
-                                        min_value=0, max_value=60, on_change=set_break_time)
-    timer_col, reset_col, face_col = st.sidebar.columns([0.25, 0.25, 0.5])
-    with timer_col:
-        break_button = st.button(label=st.session_state.break_label, key="break", on_click=break_bttn_toggle)
+    hr_col, min_col = st.sidebar.columns(2)
+    # Hours Input #############################
+    with hr_col:
+        st.number_input("Hours", key="focus_hours",
+                        min_value=0, max_value=24, value=1, step=1,
+                        on_change=lambda: set_time("focus"))
+    # Minutes Input ###########################
+    with min_col:
+        st.number_input("Minutes", key="focus_minutes",
+                        min_value=0, max_value=60, value=30, step=1,
+                        on_change=lambda: set_time("focus"))
+    state_col, reset_col = st.sidebar.columns([0.5, 0.5])
+    # Start/Pause Button ######################
+    with state_col:
+        st.button(st.session_state.focus["label"], key="focus_state",
+                  on_click=lambda: toggle_state("focus"))
+    # Reset Button ############################
     with reset_col:
-        reset_button = st.button(label="Reset", key="break_reset", on_click=reset_break_time)
-    with face_col:
+        st.button("Reset", key="focus_reset",
+                  on_click=lambda: reset_time("focus"))
+    # Title and Timer #########################
+    title_col, timer_col = focus_container.columns([0.5, 0.5])
+    with title_col:
+        st.subheader("Focus Timer")
+    with timer_col:
         face = st.empty()
-        format_break_time(face)
+        if st.session_state.focus["state"]:
+            asyncio.run(timer("focus", face))
+            st.session_state.pomodoro["focus_count"] += 1
+            st.session_state.focus["focus_complete"] = True
+            reset_time("focus")
+            st.experimental_rerun()
+        else:
+            face.subheader(format_time('focus'))
 
-    if st.session_state.break_start:
-        print("Timer started")
-        asyncio.run(break_timer(face))
-    else:
-        print("Timer stopped")
+
+    # Break Timer #############################################################
+    rest_container = st.sidebar.container()
+
+    hr_col, min_col = st.sidebar.columns(2)
+    # Hours Input #############################
+    with hr_col:
+        st.number_input("Hours", key="rest_hours",
+                        min_value=0, max_value=24, value=0, step=1,
+                        on_change=lambda: set_time("rest"))
+    # Minutes Input ###########################
+    with min_col:
+        st.number_input("Minutes", key="rest_minutes",
+                        min_value=0, max_value=60, value=5, step=1,
+                        on_change=lambda: set_time("rest"))
+    state_col, reset_col = st.sidebar.columns([0.5, 0.5])
+    # Start/Pause Button ######################
+    with state_col:
+        st.button(st.session_state.rest["label"], key="rest_state",
+                  on_click=lambda: toggle_state("rest"))
+    # Reset Button ############################
+    with reset_col:
+        st.button("Reset", key="rest_reset",
+                  on_click=lambda: reset_time("rest"))
+    # Title and Timer #########################
+    title_col, timer_col = rest_container.columns([0.5, 0.5])
+    with title_col:
+        st.subheader("Break Timer")
+    with timer_col:
+        face = st.empty()
+        if st.session_state.rest["state"]:
+            asyncio.run(timer("rest", face))
+            if st.session_state.pomodoro["focus_count"] == 1:
+                st.session_state.pomodoro["count"] += 1
+                st.session_state.pomodoro["focus_count"] = 0
+                st.session_state.pomodoro["complete"] = True
+            st.session_state.rest["rest_complete"] = True
+            reset_time("rest")
+            st.experimental_rerun()
+        else:
+            face.subheader(format_time('rest'))
+
+    # Display Timer Completion Messages #######################################
+    if st.session_state.focus["focus_complete"]:
+        st.info("Nice work! Take a break, you've earned it!")
+        st.session_state.focus["focus_complete"] = False
+    if st.session_state.rest["rest_complete"]:
+        st.info("Rest complete! Start another focus session!")
+        st.session_state.rest["rest_complete"] = False
+    if st.session_state.pomodoro["complete"]:
+        st.success("Congrats! You've completed a Pomodoro!")
+        st.session_state.pomodoro["complete"] = False
+
+
 # st.write(st.session_state)
