@@ -252,7 +252,60 @@ with st.sidebar:
         st.session_state["rest"]["rest_complete"] = False
     if st.session_state["pomodoro"]["complete"]:
         st.success("Congrats! You've completed a Pomodoro!")
-        st.session_state.pomodoro["complete"] = False
+        st.session_state["pomodoro"]["complete"] = False
+
+    st.divider()
+
+    # Task List #############################################
+    st.title("Todo List")
+    if "tasks" not in st.session_state:
+        st.session_state["tasks"] = {}
+    if "task_id" not in st.session_state:
+        st.session_state["task_id"] = 0
+
+    def add_task():
+        new_task_id = st.session_state["task_id"] + 0
+        task_config = {
+            "title": st.session_state[f"{new_task_id}_title"],
+            "delete": False,
+            "status": False,
+        }
+        st.session_state["tasks"][new_task_id] = task_config
+        st.session_state["task_id"] += 1
+
+    def remove_task(del_task_id):
+        del st.session_state["tasks"][del_task_id]
+
+    def toggle_tasks():
+        for toggle_task_id in st.session_state["tasks"]:
+            task_state = st.session_state[f"{toggle_task_id}_state"]
+            if not task_state:
+                st.session_state["tasks"][toggle_task_id]["status"] = False
+            else:
+                st.session_state["tasks"][toggle_task_id]["status"] = True
+
+    checkmark_col, task_name_col, settings_col = st.columns([0.1, 0.7, 0.2])
+    for task_id in st.session_state["tasks"]:
+        task = st.session_state["tasks"][task_id]
+        with checkmark_col:
+            st.checkbox("Complete", label_visibility="collapsed", key=f"{task_id}_state",
+                        on_change=toggle_tasks, )
+        with task_name_col:
+            st.text_input("Name", task["title"], label_visibility="collapsed", key=f"{task_id}_title",
+                          disabled=task["status"])
+        with settings_col:
+            if st.button("delete", key=f"{task_id}_delete"):
+                remove_task(task_id)
+                st.experimental_rerun()
+    with checkmark_col:
+        st.checkbox("Complete", disabled=True, key="new_checkmark", label_visibility="collapsed")
+    with task_name_col:
+        st.text_input("Title", placeholder="ex. read 3 pages", label_visibility="collapsed",
+                      key=f"{st.session_state['task_id']}_title")
+    with settings_col:
+        if st.button("add", key="create_task"):
+            add_task()
+            st.experimental_rerun()
 
 
 # st.write(st.session_state)
