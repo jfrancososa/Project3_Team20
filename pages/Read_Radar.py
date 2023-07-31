@@ -75,6 +75,8 @@ def reset_time(mode):
 def reset_count():
     st.session_state.pomodoro["count"] = 0
     st.session_state.pomodoro["focus_count"] = 0
+    st.session_state["pomodoro"]["count"] = 0
+    st.session_state["pomodoro"]["focus_count"] = 0
 
 
 def toggle_state(mode):
@@ -85,17 +87,16 @@ def toggle_state(mode):
         st.session_state[mode]["label"] = "Start"
 
 
-async def timer(mode, face):
+async def timer(mode, output):
     while True:
         if not st.session_state:
-            print(f"Session State is empty - exiting {mode} timer")
-            break
+            st.stop()
         if st.session_state[mode]["curr_time"] == 0:
-            print(f"{mode.capitalize()} Timer is done")
             break
         st.session_state[mode]["curr_time"] = max(0, st.session_state[mode]["curr_time"] - 1)
-        face.header(format_time(mode))
+        output.subheader(format_time(mode))
         await asyncio.sleep(1)
+
 
 with st.sidebar:
     st.sidebar.title("Pomodoro Settings")
@@ -107,14 +108,14 @@ with st.sidebar:
             "focus_count": 0,
             "complete": False,
         }
-    complete_col, incomplete_col, reset_col = st.sidebar.columns(3)
+    complete_col, incomplete_col, reset_col = st.sidebar.columns([0.5, 0.25, 0.25])
     with complete_col:
-        st.subheader("Completed: ")
+        with st.expander("Completed"):
+            st.write("A complete Pomodoro consists of 1 focus session and 1 break session.")
     with incomplete_col:
-        st.subheader(f"{st.session_state.pomodoro['count']}")
+        st.subheader(f"{st.session_state['pomodoro']['count']}")
     with reset_col:
         st.button("Reset", key="pomodoro_reset", on_click=lambda: reset_count())
-    st.write("*A complete Pomodoro consists of 1 focus session and 1 break session.")
 
     # Set Session Values for Focus and Break Timers
     if "focus" not in st.session_state:
@@ -153,17 +154,17 @@ with st.sidebar:
     # Hours Input #############################
     with hr_col:
         st.number_input("Hours", key="focus_hours",
-                        min_value=0, max_value=24, value=1, step=1,
+                        min_value=0, max_value=24, value=st.session_state["focus"]["default_hours"], step=1,
                         on_change=lambda: set_time("focus"))
     # Minutes Input ###########################
     with min_col:
         st.number_input("Minutes", key="focus_minutes",
-                        min_value=0, max_value=60, value=30, step=1,
+                        min_value=0, max_value=60, value=st.session_state["focus"]["default_minutes"], step=1,
                         on_change=lambda: set_time("focus"))
     state_col, reset_col = st.sidebar.columns([0.5, 0.5])
     # Start/Pause Button ######################
     with state_col:
-        st.button(st.session_state.focus["label"], key="focus_state",
+        st.button(st.session_state["focus"]["label"], key="focus_state",
                   on_click=lambda: toggle_state("focus"))
     # Reset Button ############################
     with reset_col:
@@ -175,15 +176,14 @@ with st.sidebar:
         st.subheader("Focus Timer")
     with timer_col:
         face = st.empty()
-        if st.session_state.focus["state"]:
+        if st.session_state["focus"]["state"]:
             asyncio.run(timer("focus", face))
-            st.session_state.pomodoro["focus_count"] += 1
-            st.session_state.focus["focus_complete"] = True
+            st.session_state["pomodoro"]["focus_count"] += 1
+            st.session_state["focus"]["focus_complete"] = True
             reset_time("focus")
             st.experimental_rerun()
         else:
             face.subheader(format_time('focus'))
-
 
     # Break Timer #############################################################
     rest_container = st.sidebar.container()
@@ -202,7 +202,7 @@ with st.sidebar:
     state_col, reset_col = st.sidebar.columns([0.5, 0.5])
     # Start/Pause Button ######################
     with state_col:
-        st.button(st.session_state.rest["label"], key="rest_state",
+        st.button(st.session_state["rest"]["label"], key="rest_state",
                   on_click=lambda: toggle_state("rest"))
     # Reset Button ############################
     with reset_col:
@@ -214,26 +214,27 @@ with st.sidebar:
         st.subheader("Break Timer")
     with timer_col:
         face = st.empty()
-        if st.session_state.rest["state"]:
+        if st.session_state["rest"]["state"]:
             asyncio.run(timer("rest", face))
-            if st.session_state.pomodoro["focus_count"] == 1:
-                st.session_state.pomodoro["count"] += 1
-                st.session_state.pomodoro["focus_count"] = 0
-                st.session_state.pomodoro["complete"] = True
-            st.session_state.rest["rest_complete"] = True
+            # Check if pomodoro is complete by checking if the focus count is 1
+            if st.session_state["pomodoro"]["focus_count"] == 1:
+                st.session_state["pomodoro"]["count"] += 1
+                st.session_state["pomodoro"]["focus_count"] = 0
+                st.session_state["pomodoro"]["complete"] = True
+            st.session_state["rest"]["rest_complete"] = True
             reset_time("rest")
             st.experimental_rerun()
         else:
             face.subheader(format_time('rest'))
 
     # Display Timer Completion Messages #######################################
-    if st.session_state.focus["focus_complete"]:
+    if st.session_state["focus"]["focus_complete"]:
         st.info("Nice work! Take a break, you've earned it!")
-        st.session_state.focus["focus_complete"] = False
-    if st.session_state.rest["rest_complete"]:
+        st.session_state["focus"]["focus_complete"] = False
+    if st.session_state["rest"]["rest_complete"]:
         st.info("Rest complete! Start another focus session!")
-        st.session_state.rest["rest_complete"] = False
-    if st.session_state.pomodoro["complete"]:
+        st.session_state["rest"]["rest_complete"] = False
+    if st.session_state["pomodoro"]["complete"]:
         st.success("Congrats! You've completed a Pomodoro!")
         st.session_state.pomodoro["complete"] = False
 
