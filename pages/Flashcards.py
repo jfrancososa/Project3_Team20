@@ -3,25 +3,20 @@ import random
 
 st.set_page_config(page_title="Flashcard Application", page_icon=":memo:", layout="wide")
 
-# Function to reset the flashcards
 def reset_flashcards():
     st.session_state['flashcards'] = []
     st.session_state['index'] = 0
     st.session_state['show_answer'] = False
 
-# Check if the flashcards variable exists in the session state
 if 'flashcards' not in st.session_state:
     reset_flashcards()
 
-# Check if the current flashcard index exists in the session state
 if 'index' not in st.session_state:
     st.session_state['index'] = 0
 
-# Check if the answer visibility flag exists in the session state
 if 'show_answer' not in st.session_state:
     st.session_state['show_answer'] = False
 
-# Check if hint is in the session state
 if 'hint' not in st.session_state:
     st.session_state['hint'] = 'Here is a hint!'
 
@@ -29,68 +24,124 @@ st.title("Flashcard Application")
 
 st.sidebar.header("Controls")
 
-# Checkbox to decide whether to reset the flashcards
 if st.sidebar.checkbox('Start from scratch'):
     if st.sidebar.button("Confirm Reset"):
         reset_flashcards()
 
-# Function to add a flashcard
 def add_flashcard():
     st.sidebar.subheader("Add a new flashcard")
     question = st.sidebar.text_input('Question')
     answer = st.sidebar.text_input('Answer')
-    difficulty = st.sidebar.select_slider('Difficulty', options=list(range(1, 11)))  # difficulty rating
+    difficulty = st.sidebar.select_slider('Difficulty', options=list(range(1, 11)))
+    hint = st.sidebar.text_input('Hint', value='')
     if st.sidebar.button('Add flashcard'):
-        st.session_state['flashcards'].append({
-            'question': question,
-            'answer': answer,
-            'number': len(st.session_state['flashcards']) + 1,
-            'difficulty': difficulty
-        })
+        if question and answer: # checking if question and answer fields are not empty
+            st.session_state['flashcards'].append({
+                'question': question,
+                'answer': answer,
+                'number': len(st.session_state['flashcards']) + 1,
+                'difficulty': difficulty,
+                'right_mark': 0,
+                'wrong_mark': 0,
+                'hint': hint,
+                'flagged': False,
+            })
+            st.sidebar.success("Flashcard added successfully!")
+            st.experimental_rerun()
 
 add_flashcard()
 
-# If there are flashcards, display the current one
 if st.session_state['flashcards']:
-    if not st.session_state['show_answer']:
-        st.markdown(f"<h2 style='text-align: center; color: purple;'>Question #{st.session_state['flashcards'][st.session_state['index']]['number']}</h2>", unsafe_allow_html=True)
-        st.markdown(f"<div style='text-align: center; border:2px solid black; padding: 20px; background-color: #e6e6e6;'><h1 style='color: black;'>{st.session_state['flashcards'][st.session_state['index']]['question']}</h1></div>", unsafe_allow_html=True)
-        st.write('Difficulty: ', st.session_state['flashcards'][st.session_state['index']]['difficulty'])
-        if st.button('Flip Card'):
-            st.session_state['show_answer'] = True
-    else:
-        st.markdown(f"<h2 style='text-align: center; color: purple;'>Answer #{st.session_state['flashcards'][st.session_state['index']]['number']}</h2>", unsafe_allow_html=True)
-        st.markdown(f"<div style='text-align: center; border:2px solid black; padding: 20px; background-color: #e6e6e6;'><h1 style='color: black;'>{st.session_state['flashcards'][st.session_state['index']]['answer']}</h1></div>", unsafe_allow_html=True)
-        st.write('Difficulty: ', st.session_state['flashcards'][st.session_state['index']]['difficulty'])
-        if st.button('Flip Card'):
-            st.session_state['show_answer'] = False
-
-    st.write('Flashcard: ', st.session_state['index'] + 1, '/', len(st.session_state['flashcards']))
-
-    if st.button('Next Flashcard'):
-        st.session_state['index'] = (st.session_state['index'] + 1) % len(st.session_state['flashcards'])
-        st.session_state['show_answer'] = False
-
-    def navigate_flashcards():
-        sorted_flashcards = sorted(st.session_state['flashcards'], key=lambda x: x['difficulty'], reverse=True)
-        difficulties = [f"Flashcard {i+1} - Difficulty {card['difficulty']}" for i, card in enumerate(sorted_flashcards)]
-        selection = st.selectbox('Navigate Flashcards', difficulties)
-        st.session_state['index'] = difficulties.index(selection)
-    navigate_flashcards()
-
-    def randomize_flashcards():
-        if st.button('Randomize flashcards'):
-            random.shuffle(st.session_state['flashcards'])
+    def delete_flashcard():
+        st.sidebar.subheader("Delete a flashcard")
+        flashcard_number = st.sidebar.number_input("Enter the flashcard number to delete", min_value=1, max_value=len(st.session_state['flashcards']), step=1)
+        if st.sidebar.button('Delete flashcard'):
+            del st.session_state['flashcards'][flashcard_number-1]
             st.session_state['index'] = 0
-    randomize_flashcards()
+            st.sidebar.success("Flashcard deleted successfully!")
+            st.experimental_rerun()
+    delete_flashcard()
 
-    with st.sidebar.expander("More options"):
-        def delete_flashcard():
-            if st.button('Delete current flashcard'):
-                del st.session_state['flashcards'][st.session_state['index']]
+# If there are no flashcards, prompt the user to create one
+if not st.session_state['flashcards']:
+    st.write("There are currently no flashcards. Please add a new flashcard from the side bar.")
+else:
+    current_flashcard = st.session_state['flashcards'][st.session_state['index']]
+
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.markdown(f"<h3 style='color: white;'>Flashcard: {current_flashcard['number']} / {len(st.session_state['flashcards'])}</h3>", unsafe_allow_html=True)
+    with col2:
+        st.markdown(f"<h3 style='color: white;'>Difficulty: {current_flashcard['difficulty']}</h3>", unsafe_allow_html=True)
+
+    if st.button('Flip'):
+        st.session_state['show_answer'] = not st.session_state['show_answer']   
+
+    if st.session_state['show_answer']:
+        st.markdown(f"<div style='text-align: center; border:2px solid black; padding: 20px; background-color: white;'><h1 style='color: black;'>Answer: {current_flashcard['answer']}</h1></div>", unsafe_allow_html=True)
+    else:
+        st.markdown(f"<div style='text-align: center; border:2px solid black; padding: 20px; background-color: white;'><h1 style='color: black;'>Question: {current_flashcard['question']}</h1></div>", unsafe_allow_html=True)
+
+
+    show_hint = st.checkbox('Show Hint')
+    if show_hint:
+        st.write(f"Hint: {current_flashcard['hint']}")
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        if st.button('Next Flashcard'):
+            if st.session_state['index'] < len(st.session_state['flashcards']) - 1:
+                st.session_state['index'] += 1
+            else:
                 st.session_state['index'] = 0
-        delete_flashcard()
+            st.experimental_rerun()
 
-if st.checkbox('Show Hint'):
-    hint = st.text_input('Hint', value=st.session_state['hint'])
-    st.session_state['hint'] = hint
+    with col2:
+        if st.button('Previous Flashcard'):
+            if st.session_state['index'] > 0:
+                st.session_state['index'] -= 1
+            else:
+                st.session_state['index'] = len(st.session_state['flashcards']) - 1
+            st.experimental_rerun()
+
+    with col3:
+        if st.button('Flag Flashcard'):
+            current_flashcard['flagged'] = not current_flashcard['flagged']
+            status = 'Flagged' if current_flashcard['flagged'] else 'Unflagged'
+            st.write(f"Flashcard {current_flashcard['number']} is now {status}!")
+    
+    st.write("Stats:")
+    total_attempts = current_flashcard['right_mark'] + current_flashcard['wrong_mark']
+    if total_attempts > 0:
+        st.write(f"Right marks: {current_flashcard['right_mark']} ({(current_flashcard['right_mark'] / total_attempts) * 100}%)")
+        st.write(f"Wrong marks: {current_flashcard['wrong_mark']} ({(current_flashcard['wrong_mark'] / total_attempts) * 100}%)")
+    else:
+        st.write("No marks yet.")
+    
+    if st.button('Mark as Right'):
+        current_flashcard['right_mark'] += 1
+        st.experimental_rerun()
+
+    if st.button('Mark as Wrong'):
+        current_flashcard['wrong_mark'] += 1
+        st.experimental_rerun()
+
+    sort_preference = st.selectbox('Sort by:', ['Number Ascending', 'Number Descending', 'Difficulty Ascending', 'Difficulty Descending', 'Flagged'], key='sort')
+    if sort_preference == 'Number Ascending':
+        st.session_state['flashcards'].sort(key=lambda x: x['number'])
+    elif sort_preference == 'Number Descending':
+        st.session_state['flashcards'].sort(key=lambda x: x['number'], reverse=True)
+    elif sort_preference == 'Difficulty Ascending':
+        st.session_state['flashcards'].sort(key=lambda x: x['difficulty'])
+    elif sort_preference == 'Difficulty Descending':
+        st.session_state['flashcards'].sort(key=lambda x: x['difficulty'], reverse=True)
+    elif sort_preference == 'Flagged':
+        st.session_state['flashcards'].sort(key=lambda x: x['flagged'], reverse=True)
+
+    flashcard_options = [f"Flashcard {card['number']} - Difficulty {card['difficulty']}" for card in st.session_state['flashcards']]
+    flashcard_selection = st.selectbox('Navigate Flashcards by Number or Difficulty', flashcard_options, index=st.session_state['index'])
+    if st.button('Confirm Selection'):
+        st.session_state['index'] = flashcard_options.index(flashcard_selection)
+        st.write(f"You selected: {flashcard_selection}")
+        st.experimental_rerun()
