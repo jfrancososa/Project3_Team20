@@ -12,75 +12,300 @@ FILE_NAME = basename(__file__)
 PAGE_TITLE = FILE_NAME.split(".")[0].replace("_", " ")
 st.title(PAGE_TITLE)
 
+with st.expander("Overview", expanded=True):
+    st.write("This page provides a pomodoro style timer in the sidebar with a built-in pdf viewer that allows you to "
+             "manage your productivity while reading. An explanation of the Pomodoro technique is included below and "
+             "default timer values are already set, you just press the start button and the time will automatically "
+             "count down as you focus on reading.")
+with st.expander("Pomodoro Technique", expanded=False):
+    st.markdown("From the Wikipedia article for the "
+                "[Pomodoro Technique](https://en.wikipedia.org/wiki/Pomodoro_Technique), "
+                "the Pomodoro Technique is a time management method developed by Francesco Cirillo in the late 1980s. "
+                "It uses a kitchen timer to break work into intervals, typically 25 minutes in length, separated by "
+                "short breaks. Each interval is known as a pomodoro, from the Italian word for tomato, after the "
+                "tomato-shaped kitchen timer Cirillo used as a university student.")
+    st.markdown("""
+    The original technique has six steps:
+    1. Decide on the task to be done.
+    2. Set the pomodoro timer (traditionally to 25 minutes).
+    3. Work on the task.
+    4. End work when the timer rings and take a short break (typically 5-10 minutes). 
+    5. Go back to Step 2 and repeat until you complete four pomodoros.
+    6. After four pomodoros are done, take a long break (typically 20 to 30 minutes) instead of a short break. Once the
+    long break is finished return to step 2. 
+    """)
+
 st.divider()
 
-pdf_col, timer_col = st.columns([0.7, 0.3])
 
-
+# PDF Viewer ###
 def show_pdf(file):
     base64_pdf = base64.b64encode(file.read()).decode('utf-8')
     pdf_display = f'<embed src="data:application/pdf;base64,{base64_pdf}" ' \
-                  f'width="800" height="1000" type="application/pdf"></iframe>'
+                  f'width="800" height="1000" type="application/pdf"></embed>'
     st.markdown(pdf_display, unsafe_allow_html=True)
 
 
-with pdf_col:
-    st.write("Upload a PDF file to get started")
-    uploaded_file = st.file_uploader("Upload PDF", type="pdf")
+st.write("Upload a PDF file to get started")
+uploaded_file = st.file_uploader("Upload PDF", type="pdf")
 
-    if uploaded_file is not None:
-        show_pdf(uploaded_file)
+if uploaded_file is not None:
+    show_pdf(uploaded_file)
+else:
+    st.write("No file uploaded yet")
+
+
+# Pomodoro Counter and Timers ###
+# Utility Functions
+
+
+def set_time(mode):
+    hr_button_key = f"{mode}_hours"
+    hr_button_value = st.session_state[hr_button_key]
+    min_button_key = f"{mode}_minutes"
+    min_button_value = st.session_state[min_button_key]
+    st.session_state[mode]["hours"] = hr_button_value
+    st.session_state[mode]["minutes"] = min_button_value
+    set_curr_time(mode)
+
+
+def set_curr_time(mode):
+    st.session_state[mode]["curr_time"] = st.session_state[mode]["hours"] * 3600 + \
+                                          st.session_state[mode]["minutes"] * 60 + \
+                                          st.session_state[mode]["seconds"]
+
+
+def format_time(mode):
+    hrs = st.session_state[mode]["curr_time"] // 3600
+    mins = (st.session_state[mode]["curr_time"] - hrs * 3600) // 60
+    secs = st.session_state[mode]["curr_time"] - hrs * 3600 - mins * 60
+    return f"**{hrs:02d}:{mins:02d}:{secs:02d}**"
+
+
+def reset_time(mode):
+    st.session_state[mode]["curr_time"] = st.session_state[mode]["hours"] * 3600 + \
+                                          st.session_state[mode]["minutes"] * 60 + \
+                                          st.session_state[mode]["seconds"]
+    st.session_state[mode]["state"] = False
+    st.session_state[mode]["label"] = "Start"
+
+
+def reset_count():
+    st.session_state["pomodoro"]["count"] = 0
+    st.session_state["pomodoro"]["focus_count"] = 0
+
+
+def toggle_state(mode):
+    st.session_state[mode]["state"] = not st.session_state[mode]["state"]
+    if st.session_state[mode]["state"]:
+        st.session_state[mode]["label"] = "Pause"
     else:
-        st.write("No file uploaded yet")
+        st.session_state[mode]["label"] = "Start"
 
 
-def set_time():
-    st.session_state.curr_time = st.session_state.hours * 3600 + st.session_state.minutes * 60
-
-
-def bttn_toggle():
-    st.session_state.timer_start = not st.session_state.timer_start
-    if st.session_state.time_label == "Start":
-        st.session_state.time_label = "Stop"
-    else:
-        st.session_state.time_label = "Start"
-
-
-async def timer(face):
+async def timer(mode, output):
     while True:
-        st.session_state.curr_time -= 1
-        hrs = st.session_state.curr_time // 3600
-        mins = (st.session_state.curr_time - hrs * 3600) // 60
-        secs = st.session_state.curr_time - hrs * 3600 - mins * 60
-        face.markdown(f"**{hrs:02d}:{mins:02d}:{secs:02d}**")
+        if not st.session_state:
+            st.stop()
+        if st.session_state[mode]["curr_time"] == 0:
+            break
+        st.session_state[mode]["curr_time"] = max(0, st.session_state[mode]["curr_time"] - 1)
+        output.subheader(format_time(mode))
         await asyncio.sleep(1)
 
 
-face = st.empty()
-with timer_col:
-    st.header("Timer")
-    if "timer_start" not in st.session_state:
-        st.session_state.timer_start = False
-    if "time_label" not in st.session_state:
-        st.session_state.time_label = "Start"
-    if "hours" not in st.session_state:
-        st.session_state.hours = 1
-    if "minutes" not in st.session_state:
-        st.session_state.minutes = 30
+with st.sidebar:
+    st.sidebar.title("Pomodoro Settings")
 
-    hrs_col, mins_col = st.columns(2)
-    with hrs_col:
-        hours = st.number_input("Hours", key="hours", min_value=0, max_value=24, on_change=set_time)
-    with mins_col:
-        minutes = st.number_input("Minutes", key="minutes", min_value=0, max_value=60, on_change=set_time)
-    timer_col, face_col = st.columns(2)
+    # Pomodoro Counter ########################################################
+    if "pomodoro" not in st.session_state:
+        st.session_state["pomodoro"] = {
+            "count": 0,
+            "focus_count": 0,
+            "complete": False,
+        }
+    complete_col, incomplete_col, reset_col = st.sidebar.columns([0.5, 0.25, 0.25])
+    with complete_col:
+        with st.expander("Completed"):
+            st.write("A complete Pomodoro consists of 1 focus session and 1 break session.")
+    with incomplete_col:
+        st.subheader(f"{st.session_state['pomodoro']['count']}")
+    with reset_col:
+        st.button("Reset", key="pomodoro_reset", on_click=lambda: reset_count())
+
+    # Set Session Values for Focus and Break Timers
+    if "focus" not in st.session_state:
+        st.session_state["focus"] = {
+            "hours": 1,
+            "minutes": 30,
+            "seconds": 0,
+            "default_hours": 1,
+            "default_minutes": 30,
+            "default_seconds": 0,
+            "state": False,
+            "label": "Start",
+            "curr_time": 0,
+            "focus_complete": False,
+        }
+        set_curr_time("focus")
+    if "rest" not in st.session_state:
+        st.session_state["rest"] = {
+            "hours": 0,
+            "minutes": 5,
+            "seconds": 0,
+            "default_hours": 0,
+            "default_minutes": 5,
+            "default_seconds": 0,
+            "state": False,
+            "label": "Start",
+            "curr_time": 0,
+            "rest_complete": False,
+        }
+        set_curr_time("rest")
+
+    # Focus Timer #############################################################
+    focus_container = st.sidebar.container()
+
+    hr_col, min_col = st.sidebar.columns(2)
+    # Hours Input #############################
+    with hr_col:
+        st.number_input("Hours", key="focus_hours",
+                        min_value=0, max_value=24, value=st.session_state["focus"]["default_hours"], step=1,
+                        on_change=lambda: set_time("focus"))
+    # Minutes Input ###########################
+    with min_col:
+        st.number_input("Minutes", key="focus_minutes",
+                        min_value=0, max_value=60, value=st.session_state["focus"]["default_minutes"], step=1,
+                        on_change=lambda: set_time("focus"))
+    state_col, reset_col = st.sidebar.columns([0.5, 0.5])
+    # Start/Pause Button ######################
+    with state_col:
+        st.button(st.session_state["focus"]["label"], key="focus_state",
+                  on_click=lambda: toggle_state("focus"))
+    # Reset Button ############################
+    with reset_col:
+        st.button("Reset", key="focus_reset",
+                  on_click=lambda: reset_time("focus"))
+    # Title and Timer #########################
+    title_col, timer_col = focus_container.columns([0.5, 0.5])
+    with title_col:
+        st.subheader("Focus Timer")
     with timer_col:
-        timer_button = st.button(label=st.session_state.time_label, on_click=bttn_toggle)
+        face = st.empty()
+        if st.session_state["focus"]["state"]:
+            asyncio.run(timer("focus", face))
+            st.session_state["pomodoro"]["focus_count"] += 1
+            st.session_state["focus"]["focus_complete"] = True
+            reset_time("focus")
+            st.experimental_rerun()
+        else:
+            face.subheader(format_time('focus'))
 
-    if st.session_state.timer_start:
-        st.write("Timer started")
-        asyncio.run(timer(face))
-    else:
-        st.write("Timer stopped")
+    # Break Timer #############################################################
+    rest_container = st.sidebar.container()
+
+    hr_col, min_col = st.sidebar.columns(2)
+    # Hours Input #############################
+    with hr_col:
+        st.number_input("Hours", key="rest_hours",
+                        min_value=0, max_value=24, value=0, step=1,
+                        on_change=lambda: set_time("rest"))
+    # Minutes Input ###########################
+    with min_col:
+        st.number_input("Minutes", key="rest_minutes",
+                        min_value=0, max_value=60, value=5, step=1,
+                        on_change=lambda: set_time("rest"))
+    state_col, reset_col = st.sidebar.columns([0.5, 0.5])
+    # Start/Pause Button ######################
+    with state_col:
+        st.button(st.session_state["rest"]["label"], key="rest_state",
+                  on_click=lambda: toggle_state("rest"))
+    # Reset Button ############################
+    with reset_col:
+        st.button("Reset", key="rest_reset",
+                  on_click=lambda: reset_time("rest"))
+    # Title and Timer #########################
+    title_col, timer_col = rest_container.columns([0.5, 0.5])
+    with title_col:
+        st.subheader("Break Timer")
+    with timer_col:
+        face = st.empty()
+        if st.session_state["rest"]["state"]:
+            asyncio.run(timer("rest", face))
+            # Check if pomodoro is complete by checking if the focus count is 1
+            if st.session_state["pomodoro"]["focus_count"] == 1:
+                st.session_state["pomodoro"]["count"] += 1
+                st.session_state["pomodoro"]["focus_count"] = 0
+                st.session_state["pomodoro"]["complete"] = True
+            st.session_state["rest"]["rest_complete"] = True
+            reset_time("rest")
+            st.experimental_rerun()
+        else:
+            face.subheader(format_time('rest'))
+
+    # Display Timer Completion Messages #######################################
+    if st.session_state["focus"]["focus_complete"]:
+        st.info("Nice work! Take a break, you've earned it!")
+        st.session_state["focus"]["focus_complete"] = False
+    if st.session_state["rest"]["rest_complete"]:
+        st.info("Rest complete! Start another focus session!")
+        st.session_state["rest"]["rest_complete"] = False
+    if st.session_state["pomodoro"]["complete"]:
+        st.success("Congrats! You've completed a Pomodoro!")
+        st.session_state["pomodoro"]["complete"] = False
+
+    st.divider()
+
+    # Task List #############################################
+    st.title("Todo List")
+    if "tasks" not in st.session_state:
+        st.session_state["tasks"] = {}
+    if "task_id" not in st.session_state:
+        st.session_state["task_id"] = 0
+
+    def add_task():
+        new_task_id = st.session_state["task_id"] + 0
+        task_config = {
+            "title": st.session_state[f"{new_task_id}_title"],
+            "delete": False,
+            "status": False,
+        }
+        st.session_state["tasks"][new_task_id] = task_config
+        st.session_state["task_id"] += 1
+
+    def remove_task(del_task_id):
+        del st.session_state["tasks"][del_task_id]
+
+    def toggle_tasks():
+        for toggle_task_id in st.session_state["tasks"]:
+            task_state = st.session_state[f"{toggle_task_id}_state"]
+            if not task_state:
+                st.session_state["tasks"][toggle_task_id]["status"] = False
+            else:
+                st.session_state["tasks"][toggle_task_id]["status"] = True
+
+    checkmark_col, task_name_col, settings_col = st.columns([0.1, 0.7, 0.2])
+    for task_id in st.session_state["tasks"]:
+        task = st.session_state["tasks"][task_id]
+        with checkmark_col:
+            st.checkbox("Complete", label_visibility="collapsed", key=f"{task_id}_state",
+                        on_change=toggle_tasks, )
+        with task_name_col:
+            st.text_input("Name", task["title"], label_visibility="collapsed", key=f"{task_id}_title",
+                          disabled=task["status"])
+        with settings_col:
+            if st.button("delete", key=f"{task_id}_delete"):
+                remove_task(task_id)
+                st.experimental_rerun()
+    with checkmark_col:
+        st.checkbox("Complete", disabled=True, key="new_checkmark", label_visibility="collapsed")
+    with task_name_col:
+        st.text_input("Title", placeholder="ex. read 3 pages", label_visibility="collapsed",
+                      key=f"{st.session_state['task_id']}_title")
+    with settings_col:
+        if st.button("add", key="create_task"):
+            add_task()
+            st.experimental_rerun()
+
 
 # st.write(st.session_state)
