@@ -4,6 +4,7 @@ import base64
 import asyncio
 
 from pages.utils.read_radar import *
+from pages.utils.eye_tracker import EyeTracker
 
 # Set streamlit to wide mode
 st.set_page_config(layout="wide")
@@ -12,7 +13,40 @@ st.set_page_config(layout="wide")
 # Just need to replace underscores with spaces and remove the file extension
 FILE_NAME = basename(__file__)
 PAGE_TITLE = FILE_NAME.split(".")[0].replace("_", " ")
-st.title(PAGE_TITLE)
+title_col, capture_col = st.columns([0.75, 0.25])
+
+with title_col:
+    st.title(PAGE_TITLE)
+
+
+async def frame_analysis(container):
+    while st.session_state.eye_tracker.capture.isOpened():
+        tracker_frame = st.session_state.eye_tracker.track_blinks()
+        if len(tracker_frame) == 0:
+            break
+        container.image(tracker_frame, channels="BGR", use_column_width=True)
+        await asyncio.sleep(0.1)
+
+
+with capture_col:
+    if "eye_tracker" not in st.session_state:
+        st.session_state.eye_tracker = EyeTracker()
+    if "display_feed" not in st.session_state:
+        st.session_state.display_feed = False
+    with st.expander("Blink Tracker"):
+        camera_container = st.empty()
+        st.write("Click the button below to start the webcam capture")
+        buttons_col, count_col = st.columns([0.55, 0.45])
+        with buttons_col:
+            if st.button("Start Eye Capture"):
+                st.session_state.eye_tracker.start_capture()
+                st.session_state.display_feed = True
+            if st.button("Stop Eye Capture"):
+                st.session_state.eye_tracker.stop_capture()
+                st.session_state.display_feed = False
+        with count_col:
+            st.write("Session Blinks")
+            st.write(st.session_state.eye_tracker.get_blink_count())
 
 with st.expander("Overview", expanded=True):
     st.write("This page provides a pomodoro style timer in the sidebar with a built-in pdf viewer that allows you to "
@@ -244,3 +278,7 @@ with st.sidebar:
             st.experimental_rerun()
 
 # st.write(st.session_state)
+
+
+if st.session_state.display_feed:
+    asyncio.run(frame_analysis(camera_container))
