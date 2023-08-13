@@ -2,6 +2,12 @@ import streamlit as st
 import cvzone
 import cv2
 from cvzone.FaceMeshModule import FaceMeshDetector
+# Streamlit cloud
+import os
+
+os.system('apt-get update')
+os.system('apt-get install -y libgl1-mesa-glx')
+# End install system dependencies
 
 st.set_page_config(page_title="Eye Tracker", layout="wide")
 
