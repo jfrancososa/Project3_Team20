@@ -20,7 +20,11 @@ with title_col:
 
 
 async def frame_analysis(container):
-    while st.session_state.eye_tracker.capture.isOpened():
+    while True:
+        if not st.session_state:
+            st.stop()
+        if not st.session_state.eye_tracker.capture.isOpened():
+            st.stop()
         tracker_frame = st.session_state.eye_tracker.track_blinks()
         if len(tracker_frame) == 0:
             break
