@@ -1,0 +1,3 @@
+build-essential
+pkg-config
+libgl1-mesa-glx

@@ -2,12 +2,6 @@ import streamlit as st
 import cvzone
 import cv2
 from cvzone.FaceMeshModule import FaceMeshDetector
-# For Streamlit cloud
-#import os
-
-#os.system('apt-get update')
-#os.system('apt-get install -y libgl1-mesa-glx')
-# End install system dependencies; didn't work. Full webcam integration with Streamlit Cloud can be complex
 
 st.set_page_config(page_title="Eye Tracker", layout="wide")
 
@@ -41,8 +35,8 @@ while cap.isOpened() and not video_stop:
     if faces:
         face = faces[0]
         for id in idList:
-            cv2.circle(frame, face[id], 5,color, cv2.FILLED)
-        
+            cv2.circle(frame, face[id], 5, color, cv2.FILLED)
+
         leftUp = face[159]
         leftDown = face[23]
         leftLeft = face[130]
@@ -61,13 +55,13 @@ while cap.isOpened() and not video_stop:
 
         if ratioAvg < 35 and counter == 0:
             blinkCounter += 1
-            color = (0,200,0)
+            color = (0, 200, 0)
             counter = 1
         if counter != 0:
             counter += 1
             if counter > 10:
                 counter = 0
-                color = (255,0, 255)
+                color = (255, 0, 255)
 
         cvzone.putTextRect(frame, f'Blink Count: {blinkCounter}', (50, 100),
                            colorR=color)
