@@ -45,7 +45,7 @@ names = get_page_names()
 features = {name: {"description": "",
                    "link": f"(/{name} 'Opens {name} page in a new tab')",
                    "name": ' '.join([word.capitalize() for word in name.split("_")])
-                   } for name in names
+                   } for name in names if name != "Eye_Tracker"
             }
 
 features["Flashcards"]["description"] = "Create flashcards and study them using the Leitner System."
@@ -56,3 +56,13 @@ feature_list = '\n'.join(
      for feature in features
      ])
 st.markdown(feature_list)
+
+
+st.subheader("Learn More")
+st.write("We design our feature pages around the following study techniques:")
+st.markdown("- [Pomodoro Technique](https://en.wikipedia.org/wiki/Pomodoro_Technique)")
+st.markdown("- [Leitner System](https://en.wikipedia.org/wiki/Leitner_system)")
+st.markdown("- [Feynman Technique](https://en.wikipedia.org/wiki/Feynman_technique)")
+st.markdown("- [Pareto Principle](https://en.wikipedia.org/wiki/Pareto_principle)")
+st.markdown("- [SQ3R](https://en.wikipedia.org/wiki/SQ3R)")
+st.markdown("- [PQRST](https://en.wikipedia.org/wiki/Study_skills#Reading_and_listening)")
