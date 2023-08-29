@@ -54,7 +54,7 @@ with capture_col:
 
 #page description
 with st.expander("Overview", expanded=True):
-    st.write("This page offers a structured environment for creating and studying flashcards using the Leitner System. You can create flashcards on various subjects, categorize them via difficulty, and then engage in study sessions to test your memory and understanding. The homepage offers easy navigation , and offers blinking statistics to track your progress.")
+    st.write("This page offers a structured environment for creating and studying flashcards using the Leitner System. You can create flashcards on various subjects, categorize them via difficulty, and then engage in study sessions to test your memory and understanding. The homepage offers easy navigation, and offers blinking statistics to track your progress.")
 with st.expander("Leitner System", expanded=False):
     st.markdown("Derived from the principles outlined by German scientist Sebastian Leitner in the 1970s, the Leitner System is an efficient method for studying flashcards. The system involves a set of compartments that help categorize flashcards based on how well you know the material. The system ensures that you review cards you find challenging more frequently, allowing for efficient and effective study sessions.")
     st.markdown("""
